@@ -1,0 +1,243 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="mb-6">
+    <a href="{{ url_for('lecturer_dashboard') }}"
+       class="text-sm mb-2 inline-block"
+       style="color:#7c3aed">
+       ← Back to Dashboard
+    </a>
+    <h1 class="text-3xl font-bold" style="color:#cdd6f4">
+        QR Scanner — {{ course[1] }}
+    </h1>
+    <p style="color:#6c7086">{{ course[2] }}</p>
+</div>
+
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+    <!-- Camera -->
+    <div class="card rounded-xl p-6">
+        <h2 class="text-lg font-bold mb-4" style="color:#cdd6f4">
+            📷 Camera Scanner
+        </h2>
+        <div class="relative">
+            <video id="video"
+                   class="w-full rounded-lg"
+                   style="background:#000; min-height:200px;"
+                   autoplay muted playsinline>
+            </video>
+            <canvas id="canvas" style="display:none;"></canvas>
+        </div>
+        <div class="flex gap-3 mt-4">
+            <button id="startBtn"
+                    onclick="startCamera()"
+                    class="btn-primary flex-1">
+                ▶ Start Camera
+            </button>
+            <button id="stopBtn"
+                    onclick="stopCamera()"
+                    class="flex-1 py-2 px-4 rounded-lg font-bold"
+                    style="background:#44475a; color:white;"
+                    disabled>
+                ⏹ Stop
+            </button>
+        </div>
+        <p class="text-xs mt-3 text-center" style="color:#6c7086">
+            Click Start Camera and allow camera access when prompted
+        </p>
+    </div>
+
+    <!-- Results -->
+    <div class="card rounded-xl p-6">
+        <h2 class="text-lg font-bold mb-4" style="color:#cdd6f4">
+            📋 Scan Results
+        </h2>
+
+        <!-- Status Box -->
+        <div id="status"
+             class="p-4 rounded-lg mb-4 text-center font-semibold text-sm"
+             style="background:#1e1e2e; color:#6c7086;">
+            Waiting for scan...
+        </div>
+
+        <!-- Scan Counter -->
+        <div class="flex gap-4 mb-4">
+            <div class="flex-1 p-3 rounded-lg text-center"
+                 style="background:#1e1e2e;">
+                <div id="successCount"
+                     class="text-2xl font-bold"
+                     style="color:#a6e3a1;">0</div>
+                <div class="text-xs" style="color:#6c7086;">
+                    Marked Present
+                </div>
+            </div>
+            <div class="flex-1 p-3 rounded-lg text-center"
+                 style="background:#1e1e2e;">
+                <div id="skipCount"
+                     class="text-2xl font-bold"
+                     style="color:#f9e2af;">0</div>
+                <div class="text-xs" style="color:#6c7086;">
+                    Already Marked
+                </div>
+            </div>
+        </div>
+
+        <!-- Scan Log -->
+        <div class="text-sm font-semibold mb-2"
+             style="color:#6c7086;">
+            Scan Log:
+        </div>
+        <div id="log"
+             class="space-y-2 overflow-y-auto"
+             style="max-height:300px;">
+        </div>
+    </div>
+</div>
+
+<!-- jsQR Library -->
+<script src="https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.min.js">
+</script>
+
+<script>
+    var stream       = null;
+    var scanning     = false;
+    var lastScanned  = {};
+    var successCount = 0;
+    var skipCount    = 0;
+    var courseId = parseInt("{{ course[0] }}");
+    function startCamera() {
+        if (!navigator.mediaDevices ||
+            !navigator.mediaDevices.getUserMedia) {
+            setStatus(
+                "❌ Camera not supported on this browser.",
+                "#f38ba8", "#450a0a");
+            return;
+        }
+
+        navigator.mediaDevices.getUserMedia({
+            video: { facingMode: "environment" }
+        }).then(function(s) {
+            stream = s;
+            var video = document.getElementById("video");
+            video.srcObject = stream;
+            video.play();
+            scanning = true;
+            document.getElementById("startBtn").disabled = true;
+            document.getElementById("stopBtn").disabled  = false;
+            setStatus(
+                "📷 Scanning... Show QR code to camera",
+                "#f9e2af", "#2a2a1e");
+            requestAnimationFrame(scanFrame);
+        }).catch(function(err) {
+            setStatus(
+                "❌ Camera access denied. Please allow camera access.",
+                "#f38ba8", "#450a0a");
+        });
+    }
+
+    function stopCamera() {
+        scanning = false;
+        if (stream) {
+            stream.getTracks().forEach(function(t) {
+                t.stop();
+            });
+            stream = null;
+        }
+        document.getElementById("video").srcObject = null;
+        document.getElementById("startBtn").disabled = false;
+        document.getElementById("stopBtn").disabled  = true;
+        setStatus("Camera stopped.", "#6c7086", "#1e1e2e");
+    }
+
+    function scanFrame() {
+        if (!scanning) return;
+
+        var video  = document.getElementById("video");
+        var canvas = document.getElementById("canvas");
+
+        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+            canvas.width  = video.videoWidth;
+            canvas.height = video.videoHeight;
+            var ctx = canvas.getContext("2d");
+            ctx.drawImage(video, 0, 0,
+                          canvas.width, canvas.height);
+            var imageData = ctx.getImageData(
+                0, 0, canvas.width, canvas.height);
+            var code = jsQR(
+                imageData.data,
+                imageData.width,
+                imageData.height,
+                { inversionAttempts: "dontInvert" }
+            );
+
+            if (code) {
+                var studentId = code.data.trim();
+                var now = Date.now();
+                if (!lastScanned[studentId] ||
+                    now - lastScanned[studentId] > 4000) {
+                    lastScanned[studentId] = now;
+                    markAttendance(studentId);
+                }
+            }
+        }
+        requestAnimationFrame(scanFrame);
+    }
+
+    function markAttendance(studentId) {
+        fetch("/api/mark", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                student_id: studentId,
+                course_id:  courseId
+            })
+        }).then(function(res) {
+            return res.json();
+        }).then(function(data) {
+            if (data.success) {
+                successCount++;
+                document.getElementById(
+                    "successCount").textContent = successCount;
+                setStatus(data.message,
+                          "#a6e3a1", "#064e3b");
+            } else {
+                skipCount++;
+                document.getElementById(
+                    "skipCount").textContent = skipCount;
+                setStatus(data.message,
+                          "#f9e2af", "#2a1e0a");
+            }
+            addLog(data.message, data.success);
+        }).catch(function(err) {
+            setStatus(
+                "❌ Network error. Check connection.",
+                "#f38ba8", "#450a0a");
+        });
+    }
+
+    function setStatus(msg, color, bg) {
+        var el = document.getElementById("status");
+        el.textContent      = msg;
+        el.style.color      = color;
+        el.style.background = bg;
+    }
+
+    function addLog(msg, success) {
+        var log  = document.getElementById("log");
+        var time = new Date().toLocaleTimeString();
+        var div  = document.createElement("div");
+        div.style.padding    = "10px 12px";
+        div.style.borderRadius = "6px";
+        div.style.fontSize   = "13px";
+        div.style.background = success ? "#064e3b" : "#2a1e0a";
+        div.style.color      = success ? "#a6e3a1" : "#f9e2af";
+        div.innerHTML =
+            "<span style='color:#6c7086'>" + time + "</span>" +
+            "&nbsp;&nbsp;" + msg;
+        log.insertBefore(div, log.firstChild);
+    }
+</script>
+
+{% endblock %}

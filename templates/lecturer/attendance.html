@@ -1,0 +1,150 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="mb-6">
+    <a href="{{ url_for('lecturer_dashboard') }}"
+       class="text-sm mb-2 inline-block"
+       style="color:#7c3aed">
+       ← Back to Dashboard
+    </a>
+    <h1 class="text-3xl font-bold" style="color:#cdd6f4">
+        {{ course[1] }} — Attendance
+    </h1>
+    <p style="color:#6c7086">{{ course[2] }}</p>
+</div>
+
+<!-- Date Filter -->
+<div class="card rounded-xl p-4 mb-6">
+    <form method="GET"
+          action="{{ url_for('lecturer_attendance',
+                   course_id=course[0]) }}"
+          class="flex flex-wrap gap-4 items-end">
+        <div>
+            <label class="text-sm font-semibold block mb-1">
+                Filter by Date
+            </label>
+            <input type="date" name="date"
+                   value="{{ date_filter }}"
+                   class="p-2 rounded">
+        </div>
+        <button type="submit" class="btn-primary">
+            Filter
+        </button>
+        <a href="{{ url_for('lecturer_attendance',
+                   course_id=course[0]) }}"
+           class="btn-primary"
+           style="background:#44475a">
+           Today
+        </a>
+        <a href="{{ url_for('scan_page', course_id=course[0]) }}"
+           class="btn-primary"
+           style="background:#059669">
+           📷 Scan Now
+        </a>
+    </form>
+</div>
+
+<!-- Stats -->
+<div class="grid grid-cols-2 gap-4 mb-6">
+    <div class="card rounded-xl p-4 text-center">
+        <div class="text-3xl font-bold" style="color:#059669">
+            {{ records|length }}
+        </div>
+        <div class="text-sm" style="color:#6c7086">
+            Present on {{ date_filter }}
+        </div>
+    </div>
+    <div class="card rounded-xl p-4 text-center">
+        <div class="text-3xl font-bold" style="color:#7c3aed">
+            {{ enrolled|length }}
+        </div>
+        <div class="text-sm" style="color:#6c7086">
+            Total Enrolled
+        </div>
+    </div>
+</div>
+
+<!-- Attendance Table -->
+<div class="card rounded-xl p-6 mb-6">
+    <h2 class="text-lg font-bold mb-4" style="color:#cdd6f4">
+        Attendance for {{ date_filter }}
+    </h2>
+    <div class="overflow-x-auto">
+        <table>
+            <thead>
+                <tr>
+                    <th>Student ID</th>
+                    <th>Name</th>
+                    <th>Department</th>
+                    <th>Level</th>
+                    <th>Time</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in records %}
+                <tr>
+                    <td>{{ r[0] }}</td>
+                    <td>{{ r[1] }}</td>
+                    <td>{{ r[2] }}</td>
+                    <td>{{ r[3] }}</td>
+                    <td>{{ r[5] }}</td>
+                    <td>
+                        <span class="px-2 py-1 rounded text-xs
+                                     font-bold"
+                              style="background:#064e3b;
+                                     color:#a6e3a1">
+                            {{ r[6] }}
+                        </span>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6" class="text-center py-8"
+                        style="color:#6c7086">
+                        No attendance records for this date.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<!-- Enrolled Students -->
+<div class="card rounded-xl p-6">
+    <h2 class="text-lg font-bold mb-4" style="color:#cdd6f4">
+        All Enrolled Students
+    </h2>
+    <div class="overflow-x-auto">
+        <table>
+            <thead>
+                <tr>
+                    <th>Student ID</th>
+                    <th>Name</th>
+                    <th>Department</th>
+                    <th>Level</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in enrolled %}
+                <tr>
+                    <td>{{ s[0] }}</td>
+                    <td>{{ s[1] }}</td>
+                    <td>{{ s[2] }}</td>
+                    <td>{{ s[3] }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="4" class="text-center py-8"
+                        style="color:#6c7086">
+                        No students enrolled yet.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

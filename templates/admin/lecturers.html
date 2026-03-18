@@ -1,0 +1,91 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="mb-6">
+    <h1 class="text-3xl font-bold" style="color:#cdd6f4">Lecturers</h1>
+    <p style="color:#6c7086">Add and manage lecturer accounts</p>
+</div>
+
+<!-- Add Form -->
+<div class="card rounded-xl p-6 mb-8">
+    <h2 class="text-lg font-bold mb-4" style="color:#cdd6f4">
+        Add New Lecturer
+    </h2>
+    <form method="POST" action="{{ url_for('manage_lecturers') }}">
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+            <div>
+                <label class="text-sm font-semibold">Full Name</label>
+                <input type="text" name="full_name"
+                       placeholder="e.g. Dr. John Smith" required
+                       class="w-full mt-1 p-2 rounded">
+            </div>
+            <div>
+                <label class="text-sm font-semibold">Username</label>
+                <input type="text" name="username"
+                       placeholder="e.g. john_smith" required
+                       class="w-full mt-1 p-2 rounded">
+            </div>
+            <div>
+                <label class="text-sm font-semibold">Email</label>
+                <input type="email" name="email"
+                       placeholder="e.g. john@uni.com"
+                       class="w-full mt-1 p-2 rounded">
+            </div>
+            <div>
+                <label class="text-sm font-semibold">Password</label>
+                <input type="password" name="password"
+                       placeholder="Set a password" required
+                       class="w-full mt-1 p-2 rounded">
+            </div>
+        </div>
+        <button type="submit" class="btn-primary">
+            ➕ Add Lecturer
+        </button>
+    </form>
+</div>
+
+<!-- Lecturers Table -->
+<div class="card rounded-xl p-6">
+    <h2 class="text-lg font-bold mb-4" style="color:#cdd6f4">
+        All Lecturers ({{ lecturers|length }})
+    </h2>
+    <div class="overflow-x-auto">
+        <table>
+            <thead>
+                <tr>
+                    <th>ID</th>
+                    <th>Username</th>
+                    <th>Full Name</th>
+                    <th>Email</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for l in lecturers %}
+                <tr>
+                    <td>{{ l[0] }}</td>
+                    <td>{{ l[1] }}</td>
+                    <td>{{ l[3] }}</td>
+                    <td>{{ l[4] }}</td>
+                    <td>
+                        <a href="{{ url_for('delete_lecturer', lid=l[0]) }}"
+                           class="btn-danger"
+                           onclick="return confirm('Delete this lecturer?')">
+                           Delete
+                        </a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="text-center py-8"
+                        style="color:#6c7086">
+                        No lecturers found.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

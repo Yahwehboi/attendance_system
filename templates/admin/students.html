@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="mb-6">
+    <h1 class="text-3xl font-bold" style="color:#cdd6f4">Students</h1>
+    <p style="color:#6c7086">Register and manage students</p>
+</div>
+
+<!-- Register Form -->
+<div class="card rounded-xl p-6 mb-8">
+    <h2 class="text-lg font-bold mb-4" style="color:#cdd6f4">
+        Register New Student
+    </h2>
+    <form method="POST" action="{{ url_for('manage_students') }}">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div>
+                <label class="text-sm font-semibold">Student ID</label>
+                <input type="text" name="student_id"
+                       placeholder="e.g. STU001" required
+                       class="w-full mt-1 p-2 rounded">
+            </div>
+            <div>
+                <label class="text-sm font-semibold">Full Name</label>
+                <input type="text" name="name"
+                       placeholder="e.g. John Doe" required
+                       class="w-full mt-1 p-2 rounded">
+            </div>
+            <div>
+                <label class="text-sm font-semibold">Department</label>
+                <input type="text" name="department"
+                       placeholder="e.g. Computer Science" required
+                       class="w-full mt-1 p-2 rounded">
+            </div>
+            <div>
+                <label class="text-sm font-semibold">Level</label>
+                <input type="text" name="level"
+                       placeholder="e.g. 400" required
+                       class="w-full mt-1 p-2 rounded">
+            </div>
+            <div>
+                <label class="text-sm font-semibold">Email</label>
+                <input type="email" name="email"
+                       placeholder="e.g. john@uni.com"
+                       class="w-full mt-1 p-2 rounded">
+            </div>
+            <div>
+                <label class="text-sm font-semibold">
+                    Enroll in Course (optional)
+                </label>
+                <select name="course_id"
+                        class="w-full mt-1 p-2 rounded">
+                    <option value="">-- Select Course --</option>
+                    {% for c in courses %}
+                    <option value="{{ c[0] }}">
+                        {{ c[1] }} — {{ c[2] }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <button type="submit" class="btn-primary">
+            ➕ Register Student & Generate QR
+        </button>
+    </form>
+</div>
+
+<!-- Search -->
+<div class="card rounded-xl p-6 mb-6">
+    <form method="GET" action="{{ url_for('manage_students') }}"
+          class="flex gap-4">
+        <input type="text" name="search"
+               value="{{ search }}"
+               placeholder="Search by name or ID..."
+               class="flex-1 p-2 rounded">
+        <button type="submit" class="btn-primary">Search</button>
+        <a href="{{ url_for('manage_students') }}"
+           class="btn-primary" style="background:#44475a">
+           Show All
+        </a>
+    </form>
+</div>
+
+<!-- Students Table -->
+<div class="card rounded-xl p-6">
+    <h2 class="text-lg font-bold mb-4" style="color:#cdd6f4">
+        All Students ({{ students|length }})
+    </h2>
+    <div class="overflow-x-auto">
+        <table>
+            <thead>
+                <tr>
+                    <th>Student ID</th>
+                    <th>Name</th>
+                    <th>Department</th>
+                    <th>Level</th>
+                    <th>Email</th>
+                    <th>QR Code</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for s in students %}
+                <tr>
+                    <td>{{ s[0] }}</td>
+                    <td>{{ s[1] }}</td>
+                    <td>{{ s[2] }}</td>
+                    <td>{{ s[3] }}</td>
+                    <td>{{ s[4] }}</td>
+                    <td>
+                        <a href="{{ url_for('qr_image', filename=s[0]+'.png') }}"
+                           target="_blank"
+                           class="text-purple-400 text-sm hover:underline">
+                           View QR
+                        </a>
+                    </td>
+                    <td>
+                        <a href="{{ url_for('delete_student', sid=s[0]) }}"
+                           class="btn-danger"
+                           onclick="return confirm('Delete this student?')">
+                           Delete
+                        </a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="7" class="text-center py-8"
+                        style="color:#6c7086">
+                        No students found.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="mb-6">
+    <h1 class="text-3xl font-bold" style="color:#cdd6f4">
+        Enrollments
+    </h1>
+    <p style="color:#6c7086">Assign students to courses</p>
+</div>
+
+<!-- Enroll Form -->
+<div class="card rounded-xl p-6 mb-8">
+    <h2 class="text-lg font-bold mb-4" style="color:#cdd6f4">
+        Enroll Student into Course
+    </h2>
+    <form method="POST"
+          action="{{ url_for('manage_enrollments') }}">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div>
+                <label class="text-sm font-semibold">
+                    Select Student
+                </label>
+                <select name="student_id" required
+                        class="w-full mt-1 p-2 rounded">
+                    <option value="">-- Select Student --</option>
+                    {% for s in students %}
+                    <option value="{{ s[0] }}">
+                        {{ s[0] }} — {{ s[1] }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="text-sm font-semibold">
+                    Select Course
+                </label>
+                <select name="course_id" required
+                        class="w-full mt-1 p-2 rounded">
+                    <option value="">-- Select Course --</option>
+                    {% for c in courses %}
+                    <option value="{{ c[0] }}">
+                        {{ c[1] }} — {{ c[2] }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <button type="submit" class="btn-primary">
+            🔗 Enroll Student
+        </button>
+    </form>
+</div>
+
+<!-- Enrollments Table -->
+<div class="card rounded-xl p-6">
+    <h2 class="text-lg font-bold mb-4" style="color:#cdd6f4">
+        All Enrollments ({{ enrollments|length }})
+    </h2>
+    <div class="overflow-x-auto">
+        <table>
+            <thead>
+                <tr>
+                    <th>Student ID</th>
+                    <th>Name</th>
+                    <th>Course Code</th>
+                    <th>Course Name</th>
+                    <th>Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for e in enrollments %}
+                <tr>
+                    <td>{{ e[0] }}</td>
+                    <td>{{ e[1] }}</td>
+                    <td>
+                        <span class="font-bold"
+                              style="color:#7c3aed">
+                            {{ e[2] }}
+                        </span>
+                    </td>
+                    <td>{{ e[3] }}</td>
+                    <td>
+                        <a href="{{ url_for('delete_enrollment', sid=e[0], cid=e[2]) }}"
+                           class="btn-danger"
+                           onclick="return confirm('Remove enrollment?')">
+                           Remove
+                        </a>
+                    </td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="5" class="text-center py-8"
+                        style="color:#6c7086">
+                        No enrollments yet.
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
+{% endblock %}

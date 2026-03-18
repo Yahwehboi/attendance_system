@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block content %}
+
+<div class="mb-6">
+    <h1 class="text-3xl font-bold" style="color:#cdd6f4">Dashboard</h1>
+    <p style="color:#6c7086">
+        Welcome, {{ session.full_name }} •
+        {{ today }}
+    </p>
+</div>
+
+<!-- Stat Cards -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+    <div class="card rounded-xl p-6 text-center">
+        <div class="text-4xl font-bold" style="color:#7c3aed">
+            {{ total_students }}
+        </div>
+        <div class="text-sm mt-1" style="color:#6c7086">
+            👥 Total Students
+        </div>
+    </div>
+    <div class="card rounded-xl p-6 text-center">
+        <div class="text-4xl font-bold" style="color:#059669">
+            {{ present_today }}
+        </div>
+        <div class="text-sm mt-1" style="color:#6c7086">
+            ✅ Present Today
+        </div>
+    </div>
+    <div class="card rounded-xl p-6 text-center">
+        <div class="text-4xl font-bold" style="color:#0891b2">
+            {{ total_courses }}
+        </div>
+        <div class="text-sm mt-1" style="color:#6c7086">
+            📚 Total Courses
+        </div>
+    </div>
+    <div class="card rounded-xl p-6 text-center">
+        <div class="text-4xl font-bold" style="color:#d97706">
+            {{ total_lecturers }}
+        </div>
+        <div class="text-sm mt-1" style="color:#6c7086">
+            👨‍🏫 Lecturers
+        </div>
+    </div>
+</div>
+
+<!-- Quick Actions -->
+<div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+    <a href="{{ url_for('manage_students') }}"
+       class="card rounded-xl p-4 text-center hover:opacity-80 transition">
+        <div class="text-2xl mb-1">📋</div>
+        <div class="text-sm font-semibold">Register Student</div>
+    </a>
+    <a href="{{ url_for('manage_lecturers') }}"
+       class="card rounded-xl p-4 text-center hover:opacity-80 transition">
+        <div class="text-2xl mb-1">👨‍🏫</div>
+        <div class="text-sm font-semibold">Add Lecturer</div>
+    </a>
+    <a href="{{ url_for('manage_courses') }}"
+       class="card rounded-xl p-4 text-center hover:opacity-80 transition">
+        <div class="text-2xl mb-1">📚</div>
+        <div class="text-sm font-semibold">Create Course</div>
+    </a>
+    <a href="{{ url_for('manage_enrollments') }}"
+       class="card rounded-xl p-4 text-center hover:opacity-80 transition">
+        <div class="text-2xl mb-1">🔗</div>
+        <div class="text-sm font-semibold">Enroll Students</div>
+    </a>
+</div>
+
+<!-- Recent Attendance -->
+<div class="card rounded-xl p-6">
+    <h2 class="text-lg font-bold mb-4" style="color:#cdd6f4">
+        Recent Attendance
+    </h2>
+    {% if recent %}
+    <div class="overflow-x-auto">
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Student ID</th>
+                    <th>Time</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for r in recent %}
+                <tr>
+                    <td>{{ r[0] }}</td>
+                    <td>{{ r[1] }}</td>
+                    <td>{{ r[2] }}</td>
+                    <td>{{ r[3] }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <p style="color:#6c7086">No attendance records yet.</p>
+    {% endif %}
+</div>
+
+{% endblock %}

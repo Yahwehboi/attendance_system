@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login — Attendance System</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body {
+            background-color: #1e1e2e;
+            color: #cdd6f4;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        input {
+            background-color: #2a2a3e !important;
+            color: #cdd6f4 !important;
+            border: 1px solid #44475a !important;
+            width: 100%;
+            padding: 10px 14px;
+            border-radius: 6px;
+            margin-top: 6px;
+        }
+        input:focus {
+            outline: none;
+            border-color: #7c3aed !important;
+        }
+    </style>
+</head>
+<body>
+<div class="w-full max-w-md mx-auto px-4">
+
+    <!-- Card -->
+    <div class="rounded-xl overflow-hidden shadow-2xl"
+         style="background:#2a2a3e">
+
+        <!-- Header -->
+        <div class="p-8 text-center" style="background:#7c3aed">
+            <div class="text-6xl mb-3">🎓</div>
+            <h1 class="text-xl font-bold text-white">
+                Attendance Management System
+            </h1>
+            <p class="text-sm mt-1" style="color:#e9d5ff">
+                Sign in to continue
+            </p>
+        </div>
+
+        <!-- Form -->
+        <div class="p-8">
+
+            {% if error %}
+            <div class="mb-4 p-3 rounded text-sm"
+                 style="background:#450a0a; color:#f38ba8">
+                {{ error }}
+            </div>
+            {% endif %}
+
+            <form method="POST" action="{{ url_for('login') }}">
+
+                <div class="mb-4">
+                    <label class="text-sm font-semibold"
+                           style="color:#cdd6f4">Username</label>
+                    <input type="text" name="username"
+                           placeholder="Enter your username"
+                           required autofocus>
+                </div>
+
+                <div class="mb-6">
+                    <label class="text-sm font-semibold"
+                           style="color:#cdd6f4">Password</label>
+                    <input type="password" name="password"
+                           placeholder="Enter your password"
+                           required>
+                </div>
+
+                <button type="submit"
+                        class="w-full py-3 rounded-lg font-bold text-white transition"
+                        style="background:#7c3aed"
+                        onmouseover="this.style.background='#6d28d9'"
+                        onmouseout="this.style.background='#7c3aed'">
+                    Login →
+                </button>
+
+            </form>
+
+            <p class="text-center text-xs mt-6" style="color:#6c7086">
+                Default admin: <strong>admin</strong> /
+                <strong>admin123</strong>
+            </p>
+        </div>
+    </div>
+</div>
+</body>
+</html>
