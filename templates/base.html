@@ -23,8 +23,25 @@
         body { background-color: #1e1e2e; color: #cdd6f4; }
         .sidebar { background-color: #181825; min-height: 100vh; }
         .card { background-color: #2a2a3e; }
-        .nav-link:hover { background-color: #7c3aed; color: white; }
-        .nav-active { background-color: #7c3aed; color: white; }
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 12px 24px;
+            font-size: 14px;
+            color: #cdd6f4;
+            transition: all 0.2s;
+            border-left: 3px solid transparent;
+        }
+        .nav-link:hover {
+            background-color: #7c3aed22;
+            color: white;
+            border-left: 3px solid #7c3aed;
+        }
+        .nav-active {
+            background-color: #7c3aed !important;
+            color: white !important;
+            border-left: 3px solid #a78bfa !important;
+        }
         input, select, textarea {
             background-color: #2a2a3e !important;
             color: #cdd6f4 !important;
@@ -84,20 +101,25 @@
         }
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #181825; }
-        ::-webkit-scrollbar-thumb { background: #7c3aed; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb {
+            background: #7c3aed;
+            border-radius: 3px;
+        }
     </style>
 </head>
 <body>
 <div class="flex">
 
     <!-- ── SIDEBAR ── -->
-    <div class="sidebar w-56 fixed top-0 left-0 h-full z-50 flex flex-col"
-         style="min-width:220px">
+    <div class="sidebar w-56 fixed top-0 left-0 h-full z-50
+                flex flex-col" style="min-width:220px">
 
         <!-- Logo -->
         <div class="p-6 text-center" style="background:#7c3aed">
             <div class="text-4xl mb-1">🎓</div>
-            <div class="font-bold text-white text-sm">Attendance System</div>
+            <div class="font-bold text-white text-sm">
+                Attendance System
+            </div>
             <div class="text-xs mt-1" style="color:#e9d5ff">
                 {{ session.full_name }}<br>
                 <span class="capitalize">({{ session.role }})</span>
@@ -107,36 +129,63 @@
         <!-- Nav -->
         <nav class="flex-1 py-4">
             {% if session.role == 'admin' %}
+
             <a href="{{ url_for('admin_dashboard') }}"
-               class="nav-link flex items-center px-6 py-3 text-sm transition">
-               🏠 &nbsp; Dashboard</a>
+               class="nav-link
+               {% if request.endpoint == 'admin_dashboard' %}
+               nav-active{% endif %}">
+               🏠 &nbsp; Dashboard
+            </a>
+
             <a href="{{ url_for('manage_students') }}"
-               class="nav-link flex items-center px-6 py-3 text-sm transition">
-               👥 &nbsp; Students</a>
+               class="nav-link
+               {% if request.endpoint == 'manage_students' %}
+               nav-active{% endif %}">
+               👥 &nbsp; Students
+            </a>
+
             <a href="{{ url_for('manage_lecturers') }}"
-               class="nav-link flex items-center px-6 py-3 text-sm transition">
-               👨‍🏫 &nbsp; Lecturers</a>
+               class="nav-link
+               {% if request.endpoint == 'manage_lecturers' %}
+               nav-active{% endif %}">
+               👨‍🏫 &nbsp; Lecturers
+            </a>
+
             <a href="{{ url_for('manage_courses') }}"
-               class="nav-link flex items-center px-6 py-3 text-sm transition">
-               📚 &nbsp; Courses</a>
+               class="nav-link
+               {% if request.endpoint == 'manage_courses' %}
+               nav-active{% endif %}">
+               📚 &nbsp; Courses
+            </a>
+
             <a href="{{ url_for('manage_enrollments') }}"
-               class="nav-link flex items-center px-6 py-3 text-sm transition">
-               🔗 &nbsp; Enrollments</a>
+               class="nav-link
+               {% if request.endpoint == 'manage_enrollments' %}
+               nav-active{% endif %}">
+               🔗 &nbsp; Enrollments
+            </a>
+
             {% else %}
+
             <a href="{{ url_for('lecturer_dashboard') }}"
-               class="nav-link flex items-center px-6 py-3 text-sm transition">
-               🏠 &nbsp; My Dashboard</a>
+               class="nav-link
+               {% if request.endpoint == 'lecturer_dashboard' %}
+               nav-active{% endif %}">
+               🏠 &nbsp; My Dashboard
+            </a>
+
             {% endif %}
         </nav>
 
         <!-- Logout -->
         <div class="p-4 border-t border-gray-700">
             <a href="{{ url_for('logout') }}"
-               class="flex items-center px-2 py-2 text-sm rounded"
-               style="color:#f38ba8">
+               class="nav-link rounded"
+               style="color:#f38ba8; border-left:none;">
                🚪 &nbsp; Logout
             </a>
-            <div class="text-xs text-center mt-2" style="color:#6c7086">
+            <div class="text-xs text-center mt-2"
+                 style="color:#6c7086">
                 v2.0 • Final Year Project
             </div>
         </div>
@@ -147,10 +196,13 @@
 
         <!-- Flash messages -->
         <div class="px-8 pt-4">
-            {% with messages = get_flashed_messages(with_categories=true) %}
+            {% with messages = get_flashed_messages(
+                with_categories=true) %}
                 {% if messages %}
                     {% for category, message in messages %}
-                        <div class="alert-{{ category }}">{{ message }}</div>
+                        <div class="alert-{{ category }}">
+                            {{ message }}
+                        </div>
                     {% endfor %}
                 {% endif %}
             {% endwith %}
