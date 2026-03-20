@@ -5,13 +5,40 @@
     <h1 class="text-3xl font-bold" style="color:#cdd6f4">
         Enrollments
     </h1>
-    <p style="color:#6c7086">Assign students to courses</p>
+    <p style="color:#6c7086">
+        Assign students to courses individually or in bulk
+    </p>
 </div>
 
-<!-- Enroll Form -->
-<div class="card rounded-xl p-6 mb-8">
+<!-- ── TAB BUTTONS ── -->
+<div class="flex gap-2 mb-6">
+    <button onclick="showTab('single')"
+            id="tab-single"
+            class="tab-btn px-4 py-2 rounded-lg font-semibold
+                   text-sm transition"
+            style="background:#7c3aed; color:white">
+        👤 Single Enroll
+    </button>
+    <button onclick="showTab('checkbox')"
+            id="tab-checkbox"
+            class="tab-btn px-4 py-2 rounded-lg font-semibold
+                   text-sm transition"
+            style="background:#2a2a3e; color:#cdd6f4">
+        ☑️ Multi-Select Enroll
+    </button>
+    <button onclick="showTab('dept')"
+            id="tab-dept"
+            class="tab-btn px-4 py-2 rounded-lg font-semibold
+                   text-sm transition"
+            style="background:#2a2a3e; color:#cdd6f4">
+        🏫 Dept/Level Batch Enroll
+    </button>
+</div>
+
+<!-- ── TAB 1: SINGLE ENROLL ── -->
+<div id="tab-single-content" class="card rounded-xl p-6 mb-6">
     <h2 class="text-lg font-bold mb-4" style="color:#cdd6f4">
-        Enroll Student into Course
+        👤 Enroll Single Student
     </h2>
     <form method="POST"
           action="{{ url_for('manage_enrollments') }}">
@@ -51,7 +78,172 @@
     </form>
 </div>
 
-<!-- Enrollments Table -->
+<!-- ── TAB 2: CHECKBOX MULTI-SELECT ── -->
+<div id="tab-checkbox-content"
+     class="card rounded-xl p-6 mb-6"
+     style="display:none">
+    <h2 class="text-lg font-bold mb-4" style="color:#cdd6f4">
+        ☑️ Select Multiple Students to Enroll
+    </h2>
+
+    <!-- Course + Filter -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+        <div>
+            <label class="text-sm font-semibold">
+                Select Course
+            </label>
+            <select id="checkbox-course"
+                    class="w-full mt-1 p-2 rounded"
+                    onchange="loadStudents()">
+                <option value="">-- Select Course --</option>
+                {% for c in courses %}
+                <option value="{{ c[0] }}">
+                    {{ c[1] }} — {{ c[2] }}
+                </option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="text-sm font-semibold">
+                Filter by Department
+            </label>
+            <select id="filter-dept"
+                    class="w-full mt-1 p-2 rounded"
+                    onchange="loadStudents()">
+                <option value="">All Departments</option>
+                {% for d in departments %}
+                <option value="{{ d[0] }}">{{ d[0] }}</option>
+                {% endfor %}
+            </select>
+        </div>
+        <div>
+            <label class="text-sm font-semibold">
+                Filter by Level
+            </label>
+            <select id="filter-level"
+                    class="w-full mt-1 p-2 rounded"
+                    onchange="loadStudents()">
+                <option value="">All Levels</option>
+                {% for l in levels %}
+                <option value="{{ l[0] }}">{{ l[0] }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <!-- Students List -->
+    <form method="POST"
+          action="{{ url_for('batch_enroll_checkbox') }}"
+          id="checkbox-form">
+        <input type="hidden"
+               name="course_id"
+               id="hidden-course-id">
+
+        <div class="mb-3 flex gap-3 items-center">
+            <button type="button"
+                    onclick="selectAll(true)"
+                    class="text-xs px-3 py-1 rounded"
+                    style="background:#7c3aed22;
+                           color:#a78bfa">
+                Select All
+            </button>
+            <button type="button"
+                    onclick="selectAll(false)"
+                    class="text-xs px-3 py-1 rounded"
+                    style="background:#44475a;
+                           color:#cdd6f4">
+                Deselect All
+            </button>
+            <span id="selected-count"
+                  class="text-xs"
+                  style="color:#6c7086">
+                0 selected
+            </span>
+        </div>
+
+        <div id="students-list"
+             class="max-h-64 overflow-y-auto rounded-lg p-3 mb-4"
+             style="background:#1e1e2e">
+            <p style="color:#6c7086" class="text-sm">
+                Select a course to see available students.
+            </p>
+        </div>
+
+        <button type="submit" class="btn-primary">
+            🔗 Enroll Selected Students
+        </button>
+    </form>
+</div>
+
+<!-- ── TAB 3: DEPT/LEVEL BATCH ── -->
+<div id="tab-dept-content"
+     class="card rounded-xl p-6 mb-6"
+     style="display:none">
+    <h2 class="text-lg font-bold mb-4" style="color:#cdd6f4">
+        🏫 Batch Enroll by Department / Level
+    </h2>
+    <p class="text-sm mb-4" style="color:#6c7086">
+        Enroll ALL students from a specific department
+        and/or level into a course at once.
+    </p>
+    <form method="POST"
+          action="{{ url_for('batch_enroll_dept') }}">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div>
+                <label class="text-sm font-semibold">
+                    Select Course
+                </label>
+                <select name="course_id" required
+                        class="w-full mt-1 p-2 rounded">
+                    <option value="">-- Select Course --</option>
+                    {% for c in courses %}
+                    <option value="{{ c[0] }}">
+                        {{ c[1] }} — {{ c[2] }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="text-sm font-semibold">
+                    Department (optional)
+                </label>
+                <select name="department"
+                        class="w-full mt-1 p-2 rounded">
+                    <option value="">All Departments</option>
+                    {% for d in departments %}
+                    <option value="{{ d[0] }}">
+                        {{ d[0] }}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label class="text-sm font-semibold">
+                    Level (optional)
+                </label>
+                <select name="level"
+                        class="w-full mt-1 p-2 rounded">
+                    <option value="">All Levels</option>
+                    {% for l in levels %}
+                    <option value="{{ l[0] }}">{{ l[0] }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+
+        <div class="p-3 rounded-lg mb-4 text-sm"
+             style="background:#1e1e2e; color:#f9e2af">
+            ⚠️ This will enroll ALL matching students.
+            Already enrolled students will be skipped automatically.
+        </div>
+
+        <button type="submit" class="btn-primary">
+            🏫 Batch Enroll All Matching Students
+        </button>
+    </form>
+</div>
+
+<!-- ── ENROLLMENTS TABLE ── -->
 <div class="card rounded-xl p-6">
     <h2 class="text-lg font-bold mb-4" style="color:#cdd6f4">
         All Enrollments ({{ enrollments|length }})
@@ -75,21 +267,24 @@
                     <td>
                         <span class="font-bold"
                               style="color:#7c3aed">
-                            {{ e[2] }}
+                            {{ e[3] }}
                         </span>
                     </td>
-                    <td>{{ e[3] }}</td>
+                    <td>{{ e[4] }}</td>
                     <td>
-                        <a href="{{ url_for('delete_enrollment', sid=e[0], cid=e[2]) }}"
+                        <a href="{{ url_for('delete_enrollment',
+                                   sid=e[0], cid=e[2]) }}"
                            class="btn-danger"
-                           onclick="return confirm('Remove enrollment?')">
+                           onclick="return confirm(
+                               'Remove this enrollment?')">
                            Remove
                         </a>
                     </td>
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="5" class="text-center py-8"
+                    <td colspan="5"
+                        class="text-center py-8"
                         style="color:#6c7086">
                         No enrollments yet.
                     </td>
@@ -99,5 +294,94 @@
         </table>
     </div>
 </div>
+
+<script>
+function showTab(tab) {
+    const tabs = ['single', 'checkbox', 'dept'];
+    tabs.forEach(function(t) {
+        document.getElementById('tab-' + t + '-content')
+            .style.display = 'none';
+        document.getElementById('tab-' + t)
+            .style.background = '#2a2a3e';
+        document.getElementById('tab-' + t)
+            .style.color = '#cdd6f4';
+    });
+    document.getElementById('tab-' + tab + '-content')
+        .style.display = 'block';
+    document.getElementById('tab-' + tab)
+        .style.background = '#7c3aed';
+    document.getElementById('tab-' + tab)
+        .style.color = 'white';
+}
+
+function loadStudents() {
+    var courseId = document.getElementById(
+        'checkbox-course').value;
+    var dept     = document.getElementById(
+        'filter-dept').value;
+    var level    = document.getElementById(
+        'filter-level').value;
+
+    document.getElementById(
+        'hidden-course-id').value = courseId;
+
+    if (!courseId) {
+        document.getElementById('students-list').innerHTML =
+            '<p style="color:#6c7086" class="text-sm">' +
+            'Select a course to see available students.</p>';
+        return;
+    }
+
+    var url = '/api/get_students_for_course?course_id=' +
+              courseId + '&department=' + dept +
+              '&level=' + level;
+
+    fetch(url)
+        .then(function(r) { return r.json(); })
+        .then(function(students) {
+            var html = '';
+            if (students.length === 0) {
+                html = '<p style="color:#6c7086" ' +
+                       'class="text-sm">All students in ' +
+                       'this filter are already enrolled.</p>';
+            } else {
+                students.forEach(function(s) {
+                    html += '<label class="flex items-center ' +
+                            'gap-3 p-2 rounded cursor-pointer ' +
+                            'hover:bg-gray-700 mb-1">' +
+                            '<input type="checkbox" ' +
+                            'name="student_ids" ' +
+                            'value="' + s.student_id + '" ' +
+                            'onchange="updateCount()" ' +
+                            'class="w-4 h-4 cursor-pointer">' +
+                            '<span class="text-sm" ' +
+                            'style="color:#cdd6f4">' +
+                            s.student_id + ' — ' + s.name +
+                            ' <span style="color:#6c7086">' +
+                            '(' + s.department +
+                            ' L' + s.level + ')</span>' +
+                            '</span></label>';
+                });
+            }
+            document.getElementById(
+                'students-list').innerHTML = html;
+            updateCount();
+        });
+}
+
+function selectAll(checked) {
+    var boxes = document.querySelectorAll(
+        '#students-list input[type="checkbox"]');
+    boxes.forEach(function(b) { b.checked = checked; });
+    updateCount();
+}
+
+function updateCount() {
+    var checked = document.querySelectorAll(
+        '#students-list input:checked').length;
+    document.getElementById('selected-count').textContent =
+        checked + ' selected';
+}
+</script>
 
 {% endblock %}

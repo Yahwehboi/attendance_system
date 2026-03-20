@@ -13,138 +13,282 @@
     <p style="color:#6c7086">{{ course[2] }}</p>
 </div>
 
-<!-- Date Filter -->
-<div class="card rounded-xl p-4 mb-6">
-    <form method="GET"
-          action="{{ url_for('lecturer_attendance',
-                   course_id=course[0]) }}"
-          class="flex flex-wrap gap-4 items-end">
-        <div>
-            <label class="text-sm font-semibold block mb-1">
-                Filter by Date
-            </label>
-            <input type="date" name="date"
-                   value="{{ date_filter }}"
-                   class="p-2 rounded">
-        </div>
-        <button type="submit" class="btn-primary">
-            Filter
-        </button>
-        <a href="{{ url_for('lecturer_attendance',
-                   course_id=course[0]) }}"
-           class="btn-primary"
-           style="background:#44475a">
-           Today
-        </a>
-        <a href="{{ url_for('scan_page', course_id=course[0]) }}"
-           class="btn-primary"
-           style="background:#059669">
-           📷 Scan Now
-        </a>
-    </form>
+<!-- ── TAB BUTTONS ── -->
+<div class="flex gap-2 mb-6">
+    <button onclick="showTab('attendance')"
+            id="tab-attendance"
+            class="px-4 py-2 rounded-lg font-semibold
+                   text-sm transition"
+            style="background:#7c3aed; color:white">
+        📅 Attendance Records
+    </button>
+    <button onclick="showTab('manual')"
+            id="tab-manual"
+            class="px-4 py-2 rounded-lg font-semibold
+                   text-sm transition"
+            style="background:#2a2a3e; color:#cdd6f4">
+        ✍️ Manual Attendance
+    </button>
+    <button onclick="showTab('students')"
+            id="tab-students"
+            class="px-4 py-2 rounded-lg font-semibold
+                   text-sm transition"
+            style="background:#2a2a3e; color:#cdd6f4">
+        👥 Enrolled Students
+    </button>
 </div>
 
-<!-- Stats -->
-<div class="grid grid-cols-2 gap-4 mb-6">
-    <div class="card rounded-xl p-4 text-center">
-        <div class="text-3xl font-bold" style="color:#059669">
-            {{ records|length }}
+<!-- ── TAB 1: ATTENDANCE RECORDS ── -->
+<div id="tab-attendance-content">
+
+    <!-- Filter + Scan Button -->
+    <div class="card rounded-xl p-4 mb-6">
+        <form method="GET"
+              action="{{ url_for('lecturer_attendance',
+                       course_id=course[0]) }}"
+              class="flex flex-wrap gap-4 items-end">
+            <div>
+                <label class="text-sm font-semibold block mb-1"
+                       style="color:#cdd6f4">
+                    Filter by Date
+                </label>
+                <input type="date" name="date"
+                       value="{{ date_filter }}"
+                       class="p-2 rounded">
+            </div>
+            <button type="submit" class="btn-primary">
+                Filter
+            </button>
+            <a href="{{ url_for('lecturer_attendance',
+                       course_id=course[0]) }}"
+               class="btn-primary"
+               style="background:#44475a">
+               Today
+            </a>
+            <a href="{{ url_for('scan_page',
+                       course_id=course[0]) }}"
+               class="btn-primary"
+               style="background:#059669">
+               📷 Scan Now
+            </a>
+        </form>
+    </div>
+
+    <!-- Stats -->
+    <div class="grid grid-cols-2 gap-4 mb-6">
+        <div class="card rounded-xl p-4 text-center">
+            <div class="text-3xl font-bold"
+                 style="color:#059669">
+                {{ records|length }}
+            </div>
+            <div class="text-sm" style="color:#6c7086">
+                Present on {{ date_filter }}
+            </div>
         </div>
-        <div class="text-sm" style="color:#6c7086">
-            Present on {{ date_filter }}
+        <div class="card rounded-xl p-4 text-center">
+            <div class="text-3xl font-bold"
+                 style="color:#7c3aed">
+                {{ enrolled|length }}
+            </div>
+            <div class="text-sm" style="color:#6c7086">
+                Total Enrolled
+            </div>
         </div>
     </div>
-    <div class="card rounded-xl p-4 text-center">
-        <div class="text-3xl font-bold" style="color:#7c3aed">
-            {{ enrolled|length }}
-        </div>
-        <div class="text-sm" style="color:#6c7086">
-            Total Enrolled
+
+    <!-- Attendance Table -->
+    <div class="card rounded-xl p-6">
+        <h2 class="text-lg font-bold mb-4"
+            style="color:#cdd6f4">
+            Attendance for {{ date_filter }}
+        </h2>
+        <div class="overflow-x-auto">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Student ID</th>
+                        <th>Name</th>
+                        <th>Department</th>
+                        <th>Level</th>
+                        <th>Time</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for r in records %}
+                    <tr>
+                        <td>{{ r[0] }}</td>
+                        <td>{{ r[1] }}</td>
+                        <td>{{ r[2] }}</td>
+                        <td>{{ r[3] }}</td>
+                        <td>{{ r[5] }}</td>
+                        <td>
+                            <span class="px-2 py-1 rounded
+                                         text-xs font-bold"
+                                  style="background:#064e3b;
+                                         color:#a6e3a1">
+                                {{ r[6] }}
+                            </span>
+                        </td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="6"
+                            class="text-center py-8"
+                            style="color:#6c7086">
+                            No attendance records for
+                            this date.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
     </div>
 </div>
 
-<!-- Attendance Table -->
-<div class="card rounded-xl p-6 mb-6">
-    <h2 class="text-lg font-bold mb-4" style="color:#cdd6f4">
-        Attendance for {{ date_filter }}
-    </h2>
-    <div class="overflow-x-auto">
-        <table>
-            <thead>
-                <tr>
-                    <th>Student ID</th>
-                    <th>Name</th>
-                    <th>Department</th>
-                    <th>Level</th>
-                    <th>Time</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for r in records %}
-                <tr>
-                    <td>{{ r[0] }}</td>
-                    <td>{{ r[1] }}</td>
-                    <td>{{ r[2] }}</td>
-                    <td>{{ r[3] }}</td>
-                    <td>{{ r[5] }}</td>
-                    <td>
-                        <span class="px-2 py-1 rounded text-xs
-                                     font-bold"
-                              style="background:#064e3b;
-                                     color:#a6e3a1">
-                            {{ r[6] }}
-                        </span>
-                    </td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="6" class="text-center py-8"
-                        style="color:#6c7086">
-                        No attendance records for this date.
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+<!-- ── TAB 2: MANUAL ATTENDANCE ── -->
+<div id="tab-manual-content" style="display:none">
+    <div class="card rounded-xl p-6">
+        <h2 class="text-lg font-bold mb-2"
+            style="color:#cdd6f4">
+            ✍️ Mark Attendance Manually
+        </h2>
+        <p class="text-sm mb-6" style="color:#6c7086">
+            Use this when the camera is unavailable.
+            Type the student ID to mark them present.
+        </p>
+
+        <form method="POST"
+              action="{{ url_for('manual_attendance',
+                       course_id=course[0]) }}"
+              class="flex gap-4 items-end mb-6">
+            <div class="flex-1">
+                <label class="text-sm font-semibold block mb-1"
+                       style="color:#cdd6f4">
+                    Student ID
+                </label>
+                <input type="text"
+                       name="student_id"
+                       placeholder="e.g. STU001"
+                       required
+                       class="w-full p-3 rounded"
+                       style="height:48px">
+            </div>
+            <button type="submit" class="btn-primary"
+                    style="height:48px; padding: 0 24px">
+                ✅ Mark Present
+            </button>
+        </form>
+
+        <!-- Quick reference enrolled list -->
+        <h3 class="text-sm font-semibold mb-3"
+            style="color:#6c7086">
+            Enrolled Students Reference:
+        </h3>
+        <div class="overflow-x-auto">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Student ID</th>
+                        <th>Name</th>
+                        <th>Department</th>
+                        <th>Level</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in enrolled %}
+                    <tr style="cursor:pointer"
+                        onclick="document.querySelector(
+                            'input[name=student_id]'
+                        ).value='{{ s[0] }}'">
+                        <td style="color:#7c3aed"
+                            class="font-bold">
+                            {{ s[0] }}
+                        </td>
+                        <td>{{ s[1] }}</td>
+                        <td>{{ s[2] }}</td>
+                        <td>{{ s[3] }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4"
+                            class="text-center py-8"
+                            style="color:#6c7086">
+                            No students enrolled yet.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        <p class="text-xs mt-2" style="color:#6c7086">
+            💡 Click any row to auto-fill the Student ID field
+        </p>
     </div>
 </div>
 
-<!-- Enrolled Students -->
-<div class="card rounded-xl p-6">
-    <h2 class="text-lg font-bold mb-4" style="color:#cdd6f4">
-        All Enrolled Students
-    </h2>
-    <div class="overflow-x-auto">
-        <table>
-            <thead>
-                <tr>
-                    <th>Student ID</th>
-                    <th>Name</th>
-                    <th>Department</th>
-                    <th>Level</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for s in enrolled %}
-                <tr>
-                    <td>{{ s[0] }}</td>
-                    <td>{{ s[1] }}</td>
-                    <td>{{ s[2] }}</td>
-                    <td>{{ s[3] }}</td>
-                </tr>
-                {% else %}
-                <tr>
-                    <td colspan="4" class="text-center py-8"
-                        style="color:#6c7086">
-                        No students enrolled yet.
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+<!-- ── TAB 3: ENROLLED STUDENTS ── -->
+<div id="tab-students-content" style="display:none">
+    <div class="card rounded-xl p-6">
+        <h2 class="text-lg font-bold mb-4"
+            style="color:#cdd6f4">
+            👥 Enrolled Students
+            ({{ enrolled|length }})
+        </h2>
+        <div class="overflow-x-auto">
+            <table>
+                <thead>
+                    <tr>
+                        <th>Student ID</th>
+                        <th>Name</th>
+                        <th>Department</th>
+                        <th>Level</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for s in enrolled %}
+                    <tr>
+                        <td>{{ s[0] }}</td>
+                        <td>{{ s[1] }}</td>
+                        <td>{{ s[2] }}</td>
+                        <td>{{ s[3] }}</td>
+                    </tr>
+                    {% else %}
+                    <tr>
+                        <td colspan="4"
+                            class="text-center py-8"
+                            style="color:#6c7086">
+                            No students enrolled yet.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     </div>
 </div>
+
+<script>
+function showTab(tab) {
+    var tabs = ['attendance', 'manual', 'students'];
+    tabs.forEach(function(t) {
+        document.getElementById(
+            'tab-' + t + '-content')
+            .style.display = 'none';
+        document.getElementById('tab-' + t)
+            .style.background = '#2a2a3e';
+        document.getElementById('tab-' + t)
+            .style.color = '#cdd6f4';
+    });
+    document.getElementById(
+        'tab-' + tab + '-content')
+        .style.display = 'block';
+    document.getElementById('tab-' + tab)
+        .style.background = '#7c3aed';
+    document.getElementById('tab-' + tab)
+        .style.color = 'white';
+}
+</script>
 
 {% endblock %}

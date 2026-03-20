@@ -6,12 +6,64 @@
     <p style="color:#6c7086">Register and manage students</p>
 </div>
 
-<!-- Register Form -->
-<div class="card rounded-xl p-6 mb-8">
-    <h2 class="text-lg font-bold mb-4" style="color:#cdd6f4">
-        Register New Student
+<!-- ── BULK UPLOAD SECTION ── -->
+<div class="card rounded-xl p-6 mb-6"
+     style="border: 1px dashed #7c3aed">
+    <h2 class="text-lg font-bold mb-2" style="color:#cdd6f4">
+        📤 Bulk Register via Excel
     </h2>
-    <form method="POST" action="{{ url_for('manage_students') }}">
+    <p class="text-sm mb-4" style="color:#6c7086">
+        Upload an Excel file to register multiple students at once
+        and auto-generate their QR codes.
+    </p>
+
+    <!-- Excel format guide -->
+    <div class="p-3 rounded-lg mb-4 text-xs"
+         style="background:#1e1e2e; color:#6c7086">
+        <strong style="color:#cdd6f4">
+            Required Excel column order:
+        </strong><br>
+        Column A: Student ID &nbsp;|&nbsp;
+        Column B: Full Name &nbsp;|&nbsp;
+        Column C: Department &nbsp;|&nbsp;
+        Column D: Level &nbsp;|&nbsp;
+        Column E: Email
+    </div>
+
+    <form method="POST"
+          action="{{ url_for('upload_students') }}"
+          enctype="multipart/form-data">
+        <div class="flex flex-wrap gap-4 items-end">
+            <div class="flex-1">
+                <input type="file"
+                       name="file"
+                       accept=".xlsx,.xls"
+                       required
+                       class="w-full p-3 rounded-lg text-sm"
+                       style="background:#1e1e2e;
+                              color:#cdd6f4;
+                              border:1px solid #44475a">
+            </div>
+            <button type="submit"
+                    class="btn-primary whitespace-nowrap">
+                📤 Upload & Register All
+            </button>
+        </div>
+    </form>
+
+    <!-- Download template -->
+    <p class="text-xs mt-3" style="color:#6c7086">
+        💡 Make sure row 1 is a header row and data starts from row 2.
+    </p>
+</div>
+
+<!-- ── SINGLE REGISTER FORM ── -->
+<div class="card rounded-xl p-6 mb-6">
+    <h2 class="text-lg font-bold mb-4" style="color:#cdd6f4">
+        ➕ Register Single Student
+    </h2>
+    <form method="POST"
+          action="{{ url_for('manage_students') }}">
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             <div>
                 <label class="text-sm font-semibold">Student ID</label>
@@ -28,7 +80,8 @@
             <div>
                 <label class="text-sm font-semibold">Department</label>
                 <input type="text" name="department"
-                       placeholder="e.g. Computer Science" required
+                       placeholder="e.g. Computer Science"
+                       required
                        class="w-full mt-1 p-2 rounded">
             </div>
             <div>
@@ -59,28 +112,42 @@
             </div>
         </div>
         <button type="submit" class="btn-primary">
-            ➕ Register Student & Generate QR
+            ➕ Register & Generate QR
         </button>
     </form>
 </div>
 
-<!-- Search -->
-<div class="card rounded-xl p-6 mb-6">
-    <form method="GET" action="{{ url_for('manage_students') }}"
-          class="flex gap-4">
-        <input type="text" name="search"
-               value="{{ search }}"
-               placeholder="Search by name or ID..."
-               class="flex-1 p-2 rounded">
-        <button type="submit" class="btn-primary">Search</button>
-        <a href="{{ url_for('manage_students') }}"
-           class="btn-primary" style="background:#44475a">
-           Show All
+<!-- ── SEARCH + DOWNLOAD ALL QR ── -->
+<div class="card rounded-xl p-4 mb-4">
+    <div class="flex flex-wrap gap-4 items-center
+                justify-between">
+        <form method="GET"
+              action="{{ url_for('manage_students') }}"
+              class="flex gap-3 flex-1">
+            <input type="text" name="search"
+                   value="{{ search }}"
+                   placeholder="Search by name or ID..."
+                   class="flex-1 p-2 rounded">
+            <button type="submit"
+                    class="btn-primary">
+                Search
+            </button>
+            <a href="{{ url_for('manage_students') }}"
+               class="btn-primary"
+               style="background:#44475a">
+               Show All
+            </a>
+        </form>
+
+        <!-- Download all QR codes -->
+        <a href="{{ url_for('download_qr_zip') }}"
+           class="btn-success whitespace-nowrap">
+            📦 Download All QR Codes (.zip)
         </a>
-    </form>
+    </div>
 </div>
 
-<!-- Students Table -->
+<!-- ── STUDENTS TABLE ── -->
 <div class="card rounded-xl p-6">
     <h2 class="text-lg font-bold mb-4" style="color:#cdd6f4">
         All Students ({{ students|length }})
@@ -107,23 +174,39 @@
                     <td>{{ s[3] }}</td>
                     <td>{{ s[4] }}</td>
                     <td>
-                        <a href="{{ url_for('qr_image', filename=s[0]+'.png') }}"
-                           target="_blank"
-                           class="text-purple-400 text-sm hover:underline">
-                           View QR
-                        </a>
+                        <div class="flex gap-2">
+                            <!-- View QR -->
+                            <a href="/qr/{{ s[0] }}.png"
+                               target="_blank"
+                               class="text-xs px-2 py-1 rounded"
+                               style="background:#7c3aed22;
+                                      color:#a78bfa">
+                               👁 View
+                            </a>
+                            <!-- Download QR -->
+                            <a href="{{ url_for('download_single_qr',
+                                       sid=s[0]) }}"
+                               class="text-xs px-2 py-1 rounded"
+                               style="background:#05966922;
+                                      color:#a6e3a1">
+                               ⬇ Download
+                            </a>
+                        </div>
                     </td>
                     <td>
-                        <a href="{{ url_for('delete_student', sid=s[0]) }}"
+                        <a href="{{ url_for('delete_student',
+                                   sid=s[0]) }}"
                            class="btn-danger"
-                           onclick="return confirm('Delete this student?')">
+                           onclick="return confirm(
+                               'Delete this student?')">
                            Delete
                         </a>
                     </td>
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="7" class="text-center py-8"
+                    <td colspan="7"
+                        class="text-center py-8"
                         style="color:#6c7086">
                         No students found.
                     </td>

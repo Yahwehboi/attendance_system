@@ -13,9 +13,32 @@
     <p style="color:#6c7086">{{ course[2] }}</p>
 </div>
 
+<!-- Stats -->
+<div class="grid grid-cols-2 gap-4 mb-6">
+    <div class="card rounded-xl p-4 text-center">
+        <div class="text-3xl font-bold"
+             style="color:#7c3aed">
+            {{ summary|length }}
+        </div>
+        <div class="text-sm" style="color:#6c7086">
+            Total Students
+        </div>
+    </div>
+    <div class="card rounded-xl p-4 text-center">
+        <div class="text-3xl font-bold"
+             style="color:#059669">
+            {{ total_classes }}
+        </div>
+        <div class="text-sm" style="color:#6c7086">
+            Classes Held
+        </div>
+    </div>
+</div>
+
 <!-- Export Button -->
 <div class="mb-6">
-    <a href="{{ url_for('export_course', course_id=course[0]) }}"
+    <a href="{{ url_for('export_course',
+               course_id=course[0]) }}"
        class="btn-success inline-block">
         📥 Export to Excel
     </a>
@@ -23,7 +46,8 @@
 
 <!-- Summary Table -->
 <div class="card rounded-xl p-6">
-    <h2 class="text-lg font-bold mb-4" style="color:#cdd6f4">
+    <h2 class="text-lg font-bold mb-4"
+        style="color:#cdd6f4">
         Attendance Summary
     </h2>
     <div class="overflow-x-auto">
@@ -34,11 +58,19 @@
                     <th>Name</th>
                     <th>Department</th>
                     <th>Level</th>
-                    <th>Total Present</th>
+                    <th>Present</th>
+                    <th>Total Classes</th>
+                    <th>Attendance %</th>
                 </tr>
             </thead>
             <tbody>
                 {% for s in summary %}
+                {% if total_classes > 0 %}
+                    {% set percentage = ((s[4] / total_classes)
+                                        * 100) | round(1) %}
+                {% else %}
+                    {% set percentage = 0 %}
+                {% endif %}
                 <tr>
                     <td>{{ s[0] }}</td>
                     <td>{{ s[1] }}</td>
@@ -50,10 +82,45 @@
                             {{ s[4] }}
                         </span>
                     </td>
+                    <td>{{ total_classes }}</td>
+                    <td>
+                        <!-- Percentage bar -->
+                        <div class="flex items-center gap-2">
+                            <div class="flex-1 rounded-full"
+                                 style="background:#1e1e2e;
+                                        height:8px">
+                                <div class="rounded-full"
+                                     style="width:{{ percentage }}%;
+                                            height:8px;
+                                            background:
+                                            {% if percentage >= 75 %}
+                                            #059669
+                                            {% elif percentage >= 50 %}
+                                            #d97706
+                                            {% else %}
+                                            #dc2626
+                                            {% endif %}">
+                                </div>
+                            </div>
+                            <span class="text-sm font-bold
+                                         whitespace-nowrap"
+                                  style="color:
+                                  {% if percentage >= 75 %}
+                                  #a6e3a1
+                                  {% elif percentage >= 50 %}
+                                  #f9e2af
+                                  {% else %}
+                                  #f38ba8
+                                  {% endif %}">
+                                {{ percentage }}%
+                            </span>
+                        </div>
+                    </td>
                 </tr>
                 {% else %}
                 <tr>
-                    <td colspan="5" class="text-center py-8"
+                    <td colspan="7"
+                        class="text-center py-8"
                         style="color:#6c7086">
                         No records found.
                     </td>
@@ -61,6 +128,23 @@
                 {% endfor %}
             </tbody>
         </table>
+    </div>
+
+    <!-- Legend -->
+    <div class="flex gap-4 mt-4 text-xs"
+         style="color:#6c7086">
+        <span>
+            <span style="color:#a6e3a1">●</span>
+            75%+ Good
+        </span>
+        <span>
+            <span style="color:#f9e2af">●</span>
+            50-74% Average
+        </span>
+        <span>
+            <span style="color:#f38ba8">●</span>
+            Below 50% Poor
+        </span>
     </div>
 </div>
 

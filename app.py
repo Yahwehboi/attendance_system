@@ -1,11 +1,15 @@
 import os
 import sys
+import zipfile
+import io
 from datetime import datetime
 from functools import wraps
 from flask import (Flask, render_template, request, redirect,
                    url_for, session, flash, send_from_directory,
-                   jsonify)
+                   jsonify, send_file)
 from werkzeug.security import check_password_hash, generate_password_hash
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
@@ -17,8 +21,29 @@ from modules.attendance import (mark_attendance_for_course,
                                 get_all_attendance)
 from modules.reports import export_to_excel, get_summary_report
 
+def sanitize_input(text, max_length=100):
+    """Basic input sanitization."""
+    if not text:
+        return ""
+    # Remove dangerous characters
+    text = str(text).strip()
+    text = text[:max_length]
+    return text
+
 app = Flask(__name__)
-app.secret_key = "attendance_secret_key_2024"
+app.secret_key = os.environ.get(
+    "SECRET_KEY", "att_sys_secret_2024_!@#xyz")
+app.config["SESSION_COOKIE_HTTPONLY"]  = True
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["PERMANENT_SESSION_LIFETIME"] = 3600  # 1 hour timeout
+
+# Rate limiter — prevents brute force attacks
+limiter = Limiter(
+    get_remote_address,
+    app=app,
+    default_limits=["200 per day", "50 per hour"],
+    storage_uri="memory://"
+)
 
 setup_database()
 
@@ -43,6 +68,7 @@ def admin_required(f):
 
 # ── AUTH ROUTES ───────────────────────────────────────────────────────────────
 @app.route("/", methods=["GET", "POST"])
+@limiter.limit("10 per minute")  # ← ADD THIS LINE
 def login():
     if "user_id" in session:
         return redirect(url_for("dashboard"))
@@ -50,12 +76,25 @@ def login():
     if request.method == "POST":
         username = request.form.get("username", "").strip()
         password = request.form.get("password", "").strip()
+
+        # Input validation
+        if not username or not password:
+            error = "Please enter username and password."
+            return render_template("login.html", error=error)
+
+        if len(username) > 50 or len(password) > 100:
+            error = "Invalid input."
+            return render_template("login.html", error=error)
+
         conn = create_connection()
         cursor = conn.cursor()
-        cursor.execute("SELECT * FROM users WHERE username=?", (username,))
+        cursor.execute(
+            "SELECT * FROM users WHERE username=?", (username,))
         user = cursor.fetchone()
         conn.close()
+
         if user and check_password_hash(user[2], password):
+            session.permanent = True
             session["user_id"]   = user[0]
             session["username"]  = user[1]
             session["full_name"] = user[3]
@@ -63,6 +102,18 @@ def login():
             return redirect(url_for("dashboard"))
         error = "❌ Invalid username or password."
     return render_template("login.html", error=error)
+@app.before_request
+def check_session_timeout():
+    """Auto logout after 1 hour of inactivity."""
+    if "user_id" in session:
+        last_active = session.get("last_active")
+        now = datetime.now().timestamp()
+        if last_active and now - last_active > 3600:
+            session.clear()
+            flash("Session expired. Please login again.",
+                  "error")
+            return redirect(url_for("login"))
+        session["last_active"] = now
 
 @app.route("/dashboard")
 @login_required
@@ -245,6 +296,7 @@ def delete_course(cid):
     return redirect(url_for("manage_courses"))
 
 # Enrollments
+# Enrollments
 @app.route("/admin/enrollments", methods=["GET", "POST"])
 @login_required
 @admin_required
@@ -264,7 +316,8 @@ def manage_enrollments():
             flash(f"Error: {str(e)}", "error")
 
     enrollments = conn.execute('''
-        SELECT s.student_id, s.name, c.course_code, c.course_name
+        SELECT s.student_id, s.name,
+               c.id, c.course_code, c.course_name
         FROM enrollments e
         JOIN students s ON e.student_id = s.student_id
         JOIN courses  c ON e.course_id  = c.id
@@ -276,11 +329,106 @@ def manage_enrollments():
     courses = conn.execute(
         "SELECT id, course_code, course_name FROM courses"
     ).fetchall()
+    departments = conn.execute(
+        "SELECT DISTINCT department FROM students ORDER BY department"
+    ).fetchall()
+    levels = conn.execute(
+        "SELECT DISTINCT level FROM students ORDER BY level"
+    ).fetchall()
     conn.close()
     return render_template("admin/enrollments.html",
                            enrollments=enrollments,
                            students=students,
-                           courses=courses)
+                           courses=courses,
+                           departments=departments,
+                           levels=levels)
+
+
+@app.route("/admin/enrollments/batch_checkbox",
+           methods=["POST"])
+@login_required
+@admin_required
+def batch_enroll_checkbox():
+    course_id   = request.form.get("course_id")
+    student_ids = request.form.getlist("student_ids")
+
+    if not course_id:
+        flash("Please select a course.", "error")
+        return redirect(url_for("manage_enrollments"))
+
+    if not student_ids:
+        flash("Please select at least one student.", "error")
+        return redirect(url_for("manage_enrollments"))
+
+    conn    = create_connection()
+    success = 0
+    for sid in student_ids:
+        try:
+            conn.execute('''
+                INSERT OR IGNORE INTO enrollments
+                (student_id, course_id) VALUES (?, ?)
+            ''', (sid, course_id))
+            success += 1
+        except Exception:
+            pass
+    conn.commit()
+    conn.close()
+    flash(f"✅ {success} students enrolled successfully!",
+          "success")
+    return redirect(url_for("manage_enrollments"))
+
+
+@app.route("/admin/enrollments/batch_dept",
+           methods=["POST"])
+@login_required
+@admin_required
+def batch_enroll_dept():
+    course_id  = request.form.get("course_id")
+    department = request.form.get("department", "").strip()
+    level      = request.form.get("level", "").strip()
+
+    if not course_id:
+        flash("Please select a course.", "error")
+        return redirect(url_for("manage_enrollments"))
+
+    conn   = create_connection()
+    query  = "SELECT student_id FROM students WHERE 1=1"
+    params = []
+
+    if department:
+        query += " AND department=?"
+        params.append(department)
+    if level:
+        query += " AND level=?"
+        params.append(level)
+
+    students = conn.execute(query, params).fetchall()
+
+    if not students:
+        flash("No students found with those filters.", "error")
+        conn.close()
+        return redirect(url_for("manage_enrollments"))
+
+    success = 0
+    for s in students:
+        try:
+            conn.execute('''
+                INSERT OR IGNORE INTO enrollments
+                (student_id, course_id) VALUES (?, ?)
+            ''', (s[0], course_id))
+            success += 1
+        except Exception:
+            pass
+
+    conn.commit()
+    conn.close()
+    flash(
+        f"✅ {success} students from "
+        f"{department or 'all departments'} "
+        f"Level {level or 'all levels'} enrolled!",
+        "success")
+    return redirect(url_for("manage_enrollments"))
+
 
 @app.route("/admin/enrollments/delete/<sid>/<int:cid>")
 @login_required
@@ -295,6 +443,44 @@ def delete_enrollment(sid, cid):
     conn.close()
     flash("Enrollment removed.", "success")
     return redirect(url_for("manage_enrollments"))
+
+
+@app.route("/api/get_students_for_course")
+@login_required
+@admin_required
+def get_students_for_course():
+    course_id = request.args.get("course_id")
+    dept      = request.args.get("department", "")
+    level     = request.args.get("level", "")
+
+    conn   = create_connection()
+    query  = '''
+        SELECT s.student_id, s.name, s.department, s.level
+        FROM students s
+        WHERE s.student_id NOT IN (
+            SELECT student_id FROM enrollments
+            WHERE course_id = ?
+        )
+    '''
+    params = [course_id]
+
+    if dept:
+        query += " AND s.department = ?"
+        params.append(dept)
+    if level:
+        query += " AND s.level = ?"
+        params.append(level)
+
+    query += " ORDER BY s.name"
+    students = conn.execute(query, params).fetchall()
+    conn.close()
+
+    return jsonify([{
+        "student_id": s[0],
+        "name":       s[1],
+        "department": s[2],
+        "level":      s[3]
+    } for s in students])
 
 # ── LECTURER ROUTES ───────────────────────────────────────────────────────────
 @app.route("/lecturer/dashboard")
@@ -319,8 +505,8 @@ def lecturer_dashboard():
 @app.route("/lecturer/attendance/<int:course_id>")
 @login_required
 def lecturer_attendance(course_id):
-    conn    = create_connection()
-    course  = conn.execute(
+    conn   = create_connection()
+    course = conn.execute(
         "SELECT * FROM courses WHERE id=? AND user_id=?",
         (course_id, session["user_id"])).fetchone()
     if not course:
@@ -328,12 +514,13 @@ def lecturer_attendance(course_id):
 
     date_filter = request.args.get(
         "date", datetime.now().strftime("%Y-%m-%d"))
-    records = get_attendance_by_course(course_id, date_filter)
+    records  = get_attendance_by_course(course_id, date_filter)
     enrolled = conn.execute('''
         SELECT s.student_id, s.name, s.department, s.level
         FROM students s
         JOIN enrollments e ON s.student_id = e.student_id
         WHERE e.course_id = ?
+        ORDER BY s.name
     ''', (course_id,)).fetchall()
     conn.close()
     return render_template("lecturer/attendance.html",
@@ -341,6 +528,29 @@ def lecturer_attendance(course_id):
                            records=records,
                            enrolled=enrolled,
                            date_filter=date_filter)
+@app.route("/lecturer/manual_attendance/<int:course_id>",
+           methods=["POST"])
+@login_required
+def manual_attendance(course_id):
+    """Mark attendance manually by typing student ID."""
+    conn   = create_connection()
+    course = conn.execute(
+        "SELECT * FROM courses WHERE id=? AND user_id=?",
+        (course_id, session["user_id"])).fetchone()
+    if not course:
+        return redirect(url_for("lecturer_dashboard"))
+
+    student_id = request.form.get("student_id", "").strip()
+    if student_id:
+        success, message = mark_attendance_for_course(
+            student_id, course_id)
+        flash(message, "success" if success else "error")
+    else:
+        flash("Please enter a student ID.", "error")
+
+    conn.close()
+    return redirect(url_for("lecturer_attendance",
+                            course_id=course_id))
 
 @app.route("/lecturer/reports/<int:course_id>")
 @login_required
@@ -352,6 +562,12 @@ def lecturer_reports(course_id):
     if not course:
         return redirect(url_for("lecturer_dashboard"))
 
+    # Get total number of classes held for this course
+    total_classes = conn.execute('''
+        SELECT COUNT(DISTINCT date) FROM attendance
+        WHERE course_id = ?
+    ''', (course_id,)).fetchone()[0]
+
     summary = conn.execute('''
         SELECT s.student_id, s.name, s.department, s.level,
                COUNT(a.id) as total_present
@@ -361,10 +577,13 @@ def lecturer_reports(course_id):
                                AND a.course_id = ?
         WHERE e.course_id = ?
         GROUP BY s.student_id
+        ORDER BY s.name
     ''', (course_id, course_id)).fetchall()
     conn.close()
     return render_template("lecturer/reports.html",
-                           course=course, summary=summary)
+                           course=course,
+                           summary=summary,
+                           total_classes=total_classes)
 
 @app.route("/lecturer/export/<int:course_id>")
 @login_required
@@ -408,6 +627,125 @@ def qr_image(filename):
     qr_dir = os.path.join(
         os.path.dirname(os.path.abspath(__file__)), "qr_codes")
     return send_from_directory(qr_dir, filename)
+
+    import zipfile
+import io
+
+@app.route("/admin/students/upload", methods=["POST"])
+@login_required
+@admin_required
+def upload_students():
+    """Bulk register students from Excel file."""
+    if "file" not in request.files:
+        flash("No file selected.", "error")
+        return redirect(url_for("manage_students"))
+
+    file = request.files["file"]
+    if file.filename == "":
+        flash("No file selected.", "error")
+        return redirect(url_for("manage_students"))
+
+    if not file.filename.endswith((".xlsx", ".xls")):
+        flash("Please upload an Excel file (.xlsx or .xls)", "error")
+        return redirect(url_for("manage_students"))
+
+    try:
+        import openpyxl
+        wb = openpyxl.load_workbook(file)
+        ws = wb.active
+
+        success_count = 0
+        error_count   = 0
+        errors        = []
+
+        # Skip header row, process each student
+        for row in ws.iter_rows(min_row=2, values_only=True):
+            if not row[0]:
+                continue
+
+            try:
+                student_id = str(row[0]).strip()
+                name       = str(row[1]).strip()
+                department = str(row[2]).strip() if row[2] else ""
+                level      = str(row[3]).strip() if row[3] else ""
+                email      = str(row[4]).strip() if row[4] else ""
+
+                success, message = register_student(
+                    student_id, name, department, level, email)
+
+                if success:
+                    success_count += 1
+                else:
+                    error_count += 1
+                    errors.append(f"{student_id}: {message}")
+            except Exception as e:
+                error_count += 1
+                errors.append(f"Row error: {str(e)}")
+
+        msg = f"✅ {success_count} students registered successfully!"
+        if error_count:
+            msg += f" ⚠️ {error_count} failed: {', '.join(errors[:3])}"
+
+        flash(msg, "success" if success_count > 0 else "error")
+
+    except Exception as e:
+        flash(f"❌ Error reading file: {str(e)}", "error")
+
+    return redirect(url_for("manage_students"))
+
+
+@app.route("/admin/students/download_qr_zip")
+@login_required
+@admin_required
+def download_qr_zip():
+    """Download all QR codes as a single ZIP file."""
+    try:
+        qr_dir   = os.path.join(
+            os.path.dirname(os.path.abspath(__file__)), "qr_codes")
+        zip_buffer = io.BytesIO()
+
+        with zipfile.ZipFile(zip_buffer, "w",
+                             zipfile.ZIP_DEFLATED) as zip_file:
+            for filename in os.listdir(qr_dir):
+                if filename.endswith(".png"):
+                    filepath = os.path.join(qr_dir, filename)
+                    zip_file.write(filepath, filename)
+
+        zip_buffer.seek(0)
+
+        from flask import send_file
+        return send_file(
+            zip_buffer,
+            mimetype="application/zip",
+            as_attachment=True,
+            download_name="all_qr_codes.zip"
+        )
+    except Exception as e:
+        flash(f"❌ Error creating zip: {str(e)}", "error")
+        return redirect(url_for("manage_students"))
+
+
+@app.route("/admin/students/download_qr/<sid>")
+@login_required
+@admin_required
+def download_single_qr(sid):
+    """Download a single student QR code."""
+    qr_dir = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), "qr_codes")
+    filename = f"{sid}.png"
+    filepath = os.path.join(qr_dir, filename)
+
+    if not os.path.exists(filepath):
+        flash(f"❌ QR code not found for {sid}", "error")
+        return redirect(url_for("manage_students"))
+
+    from flask import send_file
+    return send_file(
+        filepath,
+        mimetype="image/png",
+        as_attachment=True,
+        download_name=f"QR_{sid}.png"
+    )
 
 # ── RUN ───────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
