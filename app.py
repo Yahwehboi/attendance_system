@@ -68,7 +68,7 @@ def admin_required(f):
 
 # ── AUTH ROUTES ───────────────────────────────────────────────────────────────
 @app.route("/", methods=["GET", "POST"])
-@limiter.limit("10 per minute")  # ← ADD THIS LINE
+@limiter.limit("10 per minute")
 def login():
     if "user_id" in session:
         return redirect(url_for("dashboard"))
@@ -95,16 +95,21 @@ def login():
 
         if user and check_password_hash(user[2], password):
             session.permanent = True
-            session["user_id"]   = user[0]
-            session["username"]  = user[1]
-            session["full_name"] = user[3]
-            session["role"]      = user[5]
+            session["user_id"]     = user[0]
+            session["username"]    = user[1]
+            session["full_name"]   = user[3]
+            session["role"]        = user[5]
+            session["last_active"] = datetime.now().timestamp()
             return redirect(url_for("dashboard"))
         error = "❌ Invalid username or password."
     return render_template("login.html", error=error)
+
+
 @app.before_request
 def check_session_timeout():
     """Auto logout after 1 hour of inactivity."""
+    if request.endpoint in ('login', 'static', None):
+        return
     if "user_id" in session:
         last_active = session.get("last_active")
         now = datetime.now().timestamp()
@@ -115,12 +120,14 @@ def check_session_timeout():
             return redirect(url_for("login"))
         session["last_active"] = now
 
+
 @app.route("/dashboard")
 @login_required
 def dashboard():
     if session["role"] == "admin":
         return redirect(url_for("admin_dashboard"))
     return redirect(url_for("lecturer_dashboard"))
+
 
 @app.route("/logout")
 def logout():
