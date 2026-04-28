@@ -753,7 +753,53 @@ def download_single_qr(sid):
         as_attachment=True,
         download_name=f"QR_{sid}.png"
     )
+@app.route("/change_password", methods=["GET", "POST"])
+@login_required
+def change_password():
+    if request.method == "POST":
+        current  = request.form.get("current_password", "").strip()
+        new_pass = request.form.get("new_password", "").strip()
+        confirm  = request.form.get("confirm_password", "").strip()
 
+        # Validation
+        if not current or not new_pass or not confirm:
+            flash("Please fill in all fields.", "error")
+            return redirect(url_for("change_password"))
+
+        if new_pass != confirm:
+            flash("New passwords do not match.", "error")
+            return redirect(url_for("change_password"))
+
+        if len(new_pass) < 6:
+            flash("Password must be at least 6 characters.",
+                  "error")
+            return redirect(url_for("change_password"))
+
+        # Verify current password
+        conn   = create_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "SELECT password FROM users WHERE id=?",
+            (session["user_id"],))
+        user = cursor.fetchone()
+
+        if not user or not check_password_hash(
+                user[0], current):
+            conn.close()
+            flash("Current password is incorrect.", "error")
+            return redirect(url_for("change_password"))
+
+        # Update password
+        conn.execute(
+            "UPDATE users SET password=? WHERE id=?",
+            (generate_password_hash(new_pass),
+             session["user_id"]))
+        conn.commit()
+        conn.close()
+        flash("✅ Password changed successfully!", "success")
+        return redirect(url_for("dashboard"))
+
+    return render_template("change_password.html")
 # ── RUN ───────────────────────────────────────────────────────────────────────
 if __name__ == "__main__":
     print("\n" + "="*50)

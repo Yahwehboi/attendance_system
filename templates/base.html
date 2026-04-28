@@ -176,7 +176,13 @@
 
             {% endif %}
         </nav>
-
+<a href="{{ url_for('change_password') }}"
+   class="nav-link
+   {% if request.endpoint == 'change_password' %}
+   nav-active{% endif %}"
+   style="color:#f9e2af">
+   🔑 &nbsp; Change Password
+</a>
         <!-- Logout -->
         <div class="p-4 border-t border-gray-700">
             <a href="{{ url_for('logout') }}"

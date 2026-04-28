@@ -65,3 +65,13 @@ exe = EXE(
     codesign_identity=None,
     entitlements_file=None,
 )
+
+python -c 
+from werkzeug.security import generate_password_hash
+from database.db_setup import create_connection
+conn = create_connection()
+hashed = generate_password_hash('Project@2026')
+conn.execute('UPDATE users SET password=? WHERE username=?', (hashed, 'admin'))
+conn.commit()
+conn.close()
+print('Password changed!')
