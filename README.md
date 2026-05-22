@@ -28,8 +28,7 @@ The consequence: students who were falling behind were only identified *after* t
 | MySQL / PostgreSQL | Database design and management |
 | SQL | Data querying and reporting |
 | Python (Pandas) | Data import, cleaning, and analysis |
-| Microsoft Excel | Pivot table reporting for staff |
-| Tableau | Visual dashboard for management |
+| Html/CS| Javascript |
 | DB Browser / pgAdmin | Database administration |
 
 ---
@@ -167,7 +166,7 @@ ORDER BY attendance_pct DESC;
 
 ## 📸 Screenshots
 
-> *ER diagram, database schema, and dashboard screenshots will be added here.*
+![attendance-system](screenshots/attendance-system.png)
 
 ---
 
