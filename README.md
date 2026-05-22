@@ -166,7 +166,7 @@ ORDER BY attendance_pct DESC;
 
 ## 📸 Screenshots
 
-![attendance-system](screenshots/attendance-system.png)
+![attendance-system](screenshots/Attendance-system.png)
 
 ---
 
